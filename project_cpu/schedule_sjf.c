@@ -1,0 +1,78 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "task.h"
+#include "list.h"
+#include "cpu.h"
+#include "schedulers.h"
+
+struct node* head = NULL;
+int id = 1;
+int taskNum = 0;
+
+// add a task to the list 
+void add(char* name, int priority, int burst) {
+	Task* curTask = malloc(sizeof(Task));
+	curTask->name = name;
+	curTask->priority = priority;
+	curTask->burst = burst;
+	curTask->tid = id;
+	id = id + 1;
+
+	if (head == NULL) {
+		head = malloc(sizeof(struct node));
+		head->task = curTask;
+		head->next = NULL;
+	}
+	else
+		insert(&head, curTask); 
+
+	taskNum = taskNum + 1;
+}
+
+// invoke the scheduler
+void schedule() {
+	double turnaround = 0.0;
+	double taskWait = 0.0;
+	double totalWait = 0.0;
+	double taskRespond = 0.0;
+	double totalRespond = 0.0;
+	int taskNum2 = taskNum;
+
+	Task* shortestTask;
+
+	while(head != NULL){
+		Task* curTask = head->task;
+		struct node* nextNode = head->next;
+
+		while (nextNode != NULL) {
+			if(nextNode->task->burst < curTask->burst)
+				curTask = nextNode->task;
+			else if(nextNode->task->burst == curTask->burst)
+				if(nextNode->task->tid < curTask->tid)
+					curTask = nextNode->task;
+			nextNode = nextNode->next;
+		}
+
+		shortestTask = curTask;
+		run(shortestTask, shortestTask->burst);
+
+		turnaround = turnaround + taskWait + shortestTask->burst;
+		totalWait = totalWait + taskWait;
+		taskWait = taskWait + shortestTask->burst;
+		totalRespond = totalRespond + taskRespond;
+		taskRespond = taskRespond + shortestTask->burst;
+
+		delete(&head, shortestTask);
+	}
+
+	// print waiting, turnaround, response time
+	turnaround = turnaround / taskNum2;
+	totalWait = totalWait / taskNum2;
+	totalRespond = totalRespond / taskNum2;
+	printf("\n");
+	printf("Average waiting time = %.2f\n", totalWait);
+	printf("Average turnaround time = %.2f\n", turnaround);
+	printf("Average response time = %.2f\n", totalRespond);
+}
